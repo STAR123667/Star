@@ -1,0 +1,437 @@
+#include "led.h"
+uint16_t TimerPeriod = 0;
+void Power_En_Init(void)
+{  
+  GPIO_InitTypeDef   GPIO_InitStructure;
+  EXTI_InitTypeDef   EXTI_InitStructure;
+  NVIC_InitTypeDef   NVIC_InitStructure;	
+  
+  /* GPIOA Periph clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);	
+  /* Enable SYSCFG clock */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE); 
+  /* Power_EN Pin */
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_3;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_PuPd =  GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);    
+  /* Power_In Pin */
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_4;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOA, &GPIO_InitStructure); 
+  /* Connect EXTI1 Line to PA4 pin */
+  SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource4);	
+    /* Configure EXTI4 line */
+  EXTI_InitStructure.EXTI_Line = EXTI_Line4;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;   //外部位上升沿中断
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;           
+  EXTI_Init(&EXTI_InitStructure);	
+   /* Enable and set EXTI4_15 Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI4_15_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPriority = 2;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+    
+   /* 空闲引脚处理 */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOF, ENABLE);
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
+   
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_Init(GPIOC, &GPIO_InitStructure);  
+  
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_6 | GPIO_Pin_7;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_Init(GPIOF, &GPIO_InitStructure);  
+
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_1 | GPIO_Pin_5 | GPIO_Pin_15 | GPIO_Pin_11 | GPIO_Pin_12;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);  
+  
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_10 | GPIO_Pin_11 |  GPIO_Pin_6 | GPIO_Pin_7;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);  
+  
+  RCC_HSEConfig(RCC_HSE_OFF);
+  RCC_LSEConfig(RCC_LSE_OFF);
+}
+void Led_Out_Low(void)
+{
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+  TIM_OCInitTypeDef  TIM_OCInitStructure;
+  GPIO_InitTypeDef GPIO_InitStructure;  
+  
+  // /* GPIOA, GPIOB and GPIOE Clocks enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);  
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE); 
+    // /* TIM1 clock enable */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);	 
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM16, ENABLE);
+  
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_1);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_1);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_2);
+  
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_2);
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd =  GPIO_PuPd_UP;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd =  GPIO_PuPd_UP;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  // TimerPeriod = (48000000 / 17570 ) - 1;
+    // /* Time Base configuration */
+  TIM_TimeBaseStructure.TIM_Prescaler = 48;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseStructure.TIM_Period = 1000-1;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 1;
+  TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIM16, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  
+   // /* Channel 1, 2,3 and 4 Configuration in PWM mode */
+  TIM_OCStructInit(&TIM_OCInitStructure);
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
+  TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
+  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset;
+  TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Reset;
+  TIM_OCInitStructure.TIM_Pulse = LED_LIGHT_L;
+  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC2Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC3Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC1Init(TIM16,&TIM_OCInitStructure);
+  TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+  TIM_OC2Init(TIM3, &TIM_OCInitStructure);
+   // /* TIM1 counter enable */
+  TIM_Cmd(TIM3, ENABLE);
+  TIM_Cmd(TIM16, ENABLE);
+  TIM_Cmd(TIM1, ENABLE);
+    // /* TIM1 Main Output Enable */
+  TIM_CtrlPWMOutputs(TIM3, ENABLE);
+  TIM_CtrlPWMOutputs(TIM16, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);
+}
+void Led_Out_Hight(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+	
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);  
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE); 
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_8;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_ResetBits(GPIOB, GPIO_Pin_4);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_5);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_8);
+	GPIO_ResetBits(GPIOA, GPIO_Pin_8);
+	GPIO_ResetBits(GPIOA, GPIO_Pin_9);
+	GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+}
+void Led_Out_Close(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);  
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE); 
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_8;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd =  GPIO_PuPd_UP;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd =  GPIO_PuPd_UP;
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_SetBits(GPIOB, GPIO_Pin_4);
+	GPIO_SetBits(GPIOB, GPIO_Pin_5);
+	GPIO_SetBits(GPIOB, GPIO_Pin_8);
+	GPIO_SetBits(GPIOA, GPIO_Pin_8);
+	GPIO_SetBits(GPIOA, GPIO_Pin_9);
+	GPIO_SetBits(GPIOA, GPIO_Pin_10);
+}
+void Time6_Init(void)
+{
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+ 
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
+   /* Time base configuration */
+  TIM_TimeBaseStructure.TIM_Period = 1000-1;    //定时器周期值设定
+  TIM_TimeBaseStructure.TIM_Prescaler = 48;  //定时器预分期值设定
+  TIM_TimeBaseStructure.TIM_ClockDivision = 1;   // 时钟分频值设定
+  TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit(TIM6, &TIM_TimeBaseStructure);
+
+  /* Prescaler configuration */
+  TIM_ClearFlag(TIM6, TIM_FLAG_Update);                              //?????,??????????????
+  TIM_ARRPreloadConfig(TIM6, ENABLE);                               //??ARR?????? 
+  // TIM_ITConfig(TIM6,TIM_IT_Update, ENABLE);                       //??TIM3????
+  TIM_Cmd(TIM6, DISABLE);                                                       //??TIM3 ???
+}
+void PowerUpStart1(uint8_t temp)
+{
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+  TIM_OCInitTypeDef  TIM_OCInitStructure;
+  GPIO_InitTypeDef GPIO_InitStructure;  
+  
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE); 
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE); 
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+  
+  TIM_TimeBaseStructure.TIM_Prescaler = 48;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseStructure.TIM_Period = 1000-1;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 1;
+  TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+  
+  TIM_OCStructInit(&TIM_OCInitStructure);
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
+  TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
+  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
+  TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Reset;
+  TIM_OCInitStructure.TIM_Pulse = LED_LIGHT_L;
+  
+  if(temp==0x01)
+  {
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_2);
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_5);
+  
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC3Init(TIM1, &TIM_OCInitStructure);
+   // /* TIM1 counter enable */
+  TIM_Cmd(TIM1, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);	 
+  }
+  else if(temp==0x02)
+  {
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_2);
+	  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);	
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOA, GPIO_Pin_10);
+
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC2Init(TIM1, &TIM_OCInitStructure);
+   // /* TIM1 counter enable */
+  TIM_Cmd(TIM1, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);	  
+  }
+  else if(temp==0x03)
+  {
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_2);
+	  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);	
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);	
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOA, GPIO_Pin_9);
+  GPIO_SetBits(GPIOA, GPIO_Pin_10);
+  
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIM16, &TIM_TimeBaseStructure);
+
+  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC1Init(TIM16, &TIM_OCInitStructure);
+   // /* TIM1 counter enable */
+  TIM_Cmd(TIM1, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);	 
+  TIM_Cmd(TIM16, ENABLE);
+  TIM_CtrlPWMOutputs(TIM16, ENABLE);	    
+  }
+   else if(temp==0x04)
+  {
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_1);
+	  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);	
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);	
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOA, GPIO_Pin_9);
+  GPIO_SetBits(GPIOA, GPIO_Pin_10);
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_8);
+  
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+
+  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+   // /* TIM1 counter enable */
+  TIM_Cmd(TIM1, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);	 
+  TIM_Cmd(TIM3, ENABLE);
+  TIM_CtrlPWMOutputs(TIM3, ENABLE);	    
+  }
+  else if(temp==0x05)
+  {
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_1);
+	  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);	
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);	
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOA, GPIO_Pin_9);
+  GPIO_SetBits(GPIOA, GPIO_Pin_10);
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_4;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_8);
+  GPIO_SetBits(GPIOB, GPIO_Pin_4);
+  
+  TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+
+  TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+  TIM_OC2Init(TIM3, &TIM_OCInitStructure);
+   // /* TIM1 counter enable */
+  TIM_Cmd(TIM1, ENABLE);
+  TIM_CtrlPWMOutputs(TIM1, ENABLE);	 
+  TIM_Cmd(TIM3, ENABLE);
+  TIM_CtrlPWMOutputs(TIM3, ENABLE);	    
+  }
+  else 
+  {;}
+}
+
+
+
+
+
+
+
+
