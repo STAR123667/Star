@@ -1,25 +1,28 @@
 #include "main.h"
 /******************************************************************************
 ;  *----------------------摘要描述---------------------------------
-;  *   注:      本例程测试EXTI外部事件唤醒SLEEP
-;  *  	 PA4 EXTI外部事件输入, PA10 输出    
-;  *     PA4 上升沿触发事件,唤醒SLEEP,翻转对应IO一次
+;  *   注:       本例程测试EXTI外部中断
+;  *  	 PA4 EXTI输入, PA10 LED输出    
+;  *     PA4 上升沿中断，输入一次翻转对应IO一次
 ******************************************************************************/
 u32 KeyTime=0;
-bool keyflag;
-#define KEY_IN __GPIO_INPUT_PIN_GET(GPIOA, GPIO_PIN_4)
 
 void cs32_gpio_init(void);
 void cs_eval_led_toggle(void);
 void delay_1ms(uint16_t TimeDelay);
 
+#define  KEY_IN  __GPIO_INPUT_PIN_GET(GPIOA, GPIO_PIN_4)
+
+bool keyflag;
+
 int main(void)
 {	
    cs32_gpio_init();
-
+	
    while(1)
    {
-  	   
+
+   	  	   
 	 if(KEY_IN != RESET)
     {
 		delay_1ms(10);
@@ -35,7 +38,7 @@ int main(void)
 	else 
 	{
 	      keyflag=0;
-		    pmu_deep_sleep_mode_enter(PMU_LDO_LOW_POWER, PMU_DSM_ENTRY_WFE);
+		  pmu_deep_sleep_mode_enter(PMU_LDO_LOW_POWER, PMU_DSM_ENTRY_WFI);
 	}
   
 	   
@@ -57,10 +60,16 @@ void cs32_gpio_init(void)
   /*配置GPIOA_4 输入模式*/
   gpio_mode_set(GPIOA, GPIO_PIN_4, GPIO_MODE_IN_FLOAT);  
 	/*配置外部中断 模式*/
-  EXTI->INTEN &= 0xffffffef;	  /*中断线Line4不使能*/ 
-  EXTI->EVTEN |= 0x00000010;	  /*事件线Line4使能*/ 
+  EXTI->INTEN |= 0x00000010;	  /*中断线Line4使能*/ 
+  EXTI->EVTEN &= 0xffffffef;	  /*事件线Line4不使能*/ 
   EXTI->RTEN  |= 0x00000010;	  /*上升沿中断使能*/ 
   EXTI->SWTIEN|= 0x00000010;	  /*使能Line4软件触发中断/事件使能*/ 
+
+  // Enable and set EXTI4_15 Interrupt
+   nvic_config_struct.IRQn = IRQn_EXTI4_15;
+   nvic_config_struct.priority = 0x00;
+   nvic_config_struct.enable_flag = ENABLE;
+   nvic_init(&nvic_config_struct);	
 }
 void cs_eval_led_toggle(void)
 {	
@@ -82,6 +91,21 @@ void delay_1ms(uint16_t TimeDelay)
         __NOP();
     }
 }
+/**
+  * @fn void EXTI4_15_IRQHandler(void)
+  * @brief  This function handles External lines 4 to 15 interrupt request.
+  * @param  None
+  * @return None
+  */
+void EXTI4_15_IRQHandler(void)
+{
+    if(__EXTI_FLAG_STATUS_GET(EXTI_LINE_4) != RESET)
+    {
+        /* Clear the EXTI line 4  bit */
+        __EXTI_FLAG_CLEAR(EXTI_LINE_4);
+    }
+}
+
 
 
 
