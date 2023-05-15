@@ -1,0 +1,102 @@
+#define TB_LEVEL_MAX   150   //Í¬²½Âë×î´ó
+#define TB_LEVEL_MIN   120   
+
+#define DATA_LEVEL_MAX   30  //Êý¾Ý×î´ó
+#define DATA_LEVEL_MIN   18   
+
+#define RX_BIT_DATA   8  //½ÓÊÕÎ»Êý
+#define RX_BYTE_DATA  8  //½ÓÊÕ×Ö½ÚÊý
+
+bool decode_ok;		   // ½âÂë³É¹¦±êÖ¾
+bool old_rc5;        //½ÓÊÕÒý½ÅÉÏÉýÑØÅÐ¶Ï
+bool tb_ok;           //½ÓÊÕÍ¬²½Âë±êÖ¾Î»
+uint8_t hh_w,ll_w;   //¸ßµÍµçÆ½¿í¶È
+uint8_t temp;        //µçÆ½×Ü³¤¶È
+uint8_t Rx_data[8];     //±£´æ°ËÎ»Êý¾Ý
+uint8_t *q;           
+uint8_t RF_Byte_cnt;     //¼ÇÂ¼×Ö½ÚÊý
+uint8_t RF_Bit_cnt;     //¼ÇÂ¼±ÈÌØÎ»Êý
+
+void Rf433_JIMA(void)
+{
+	 if(RF_IO)     //Òý½Å¸ßµçÆ½
+	 {
+		 if(old_rc5==0)
+		 {
+			  temp = ll_w + hh_w;
+			  if(!tb_ok)     // ÅÐ¶ÏÂëÍ·
+				{
+					if(temp<=TB_LEVEL_MAX && temp>=TB_LEVEL_MIN)
+					{
+					 if (((hh_w>=108)&&(hh_w<=120)) &&  (ll_w>=11)&&(ll_w<=15)) // Âú×ãÍ¬²½ÂëÊ±³¤  H :5MS L : 551US
+			    {  
+				  tb_ok=1;       //Í¬²½Âë½ÓÊÕ³É¹¦
+					RF_Bit_cnt=0;
+					RF_Byte_cnt=0;
+					q = Rx_data;         //½ÓÊÕÊý¾ÝÖ¸Õë 	
+				  temp =0;		
+			    }				
+					} 
+ 			 }
+			  else    //ÒÑÓÐÐÅºÅÍ·
+				{
+				 if((temp<=DATA_LEVEL_MAX) && (temp>=DATA_LEVEL_MIN))   //¸ßµÍµçÆ½Ê±¼ä
+				 {		
+				   if( (hh_w >= 5) && (ll_w >= 5))		
+					 { 
+					    *q <<= 1;
+				   if( hh_w > ll_w)     
+					 {
+					   *q |= 0x01;  //1
+					 }
+					 else
+					 {
+					   *q &= 0xfe;  //0
+					 }
+					 if(++RF_Bit_cnt >= RX_BIT_DATA)
+					 {
+						 
+					   RF_Bit_cnt=0;    //×Ö½Ú¼ÇÂ¼Çå³ý
+						 ++q;
+						 if(++RF_Byte_cnt >= RX_BYTE_DATA)
+					   {	 
+						    RF_Byte_cnt=0;
+							  tb_ok=0;
+							  decode_ok=1;
+						 }	 
+				   }
+				 }
+					 else
+					 {
+					   tb_ok=0;
+						 decode_ok=0;
+					 }  	
+			 }
+        else
+				{
+				  tb_ok=0;
+			    decode_ok=0;
+				}					
+		 }			
+		  if(decode_ok==1) //½âÂëÍê³É
+			{
+			   decode_ok=0;
+				 ;
+				 ;
+			}
+      temp=0;
+      hh_w = 0;
+      ll_w = 0;
+		 }
+		 old_rc5=1;
+		 hh_w++;
+	 }
+	 else         //Òý½ÅµÍµçÆ½
+	 {
+	   ll_w++;
+		 old_rc5=0;
+	 }
+		
+}
+
+ 

@@ -1,0 +1,165 @@
+#include "P273.h"
+#define uchar volatile unsigned char   	//定义uchar
+#define CYC_T  12      	   	    //波特率38400
+#define KEY           P12D              //按键
+#define UartOutPin    P13D 	   //AD结果从P13口发出
+//#define ADCPin        P14D   	   
+uchar ABuf,StatusBuf;  	//中断子程序使用，必须定义
+uchar keycount;	   	   	//按键消抖使用
+typedef  struct
+{
+   	uchar bit0         : 1;
+   	uchar bit1         : 1;
+   	uchar bit2         : 1;
+   	uchar bit3         : 1;
+   	uchar bit4         : 1;
+   	uchar bit5         : 1;
+   	uchar bit6         : 1;
+   	uchar bit7         : 1;
+} bitn;
+volatile  bitn   Flag1;
+//;标志定义-------------------------------------
+#define  keyflag       Flag1.bit0  	//按键标志定义
+/***********************延时1ms子函数*****************************/
+void delayms(uchar x)  	   	   	   	//FCPU=2M
+{
+   	while(x--)
+   	{
+   	   	uchar y=140;
+   	   	while(y--)
+   	   	{
+   	   	   	ClrWdt();
+   	   	   	Nop();
+   	   	   	Nop();
+   	   	   	Nop();
+   	   	   	Nop();
+   	   	}
+   	}
+}
+/***********************延时us子函数*****************************/
+void delay_10us(uchar x)   	   	   	   	//FCPU=2M
+{
+   	while(x--)
+   	{
+   	   	ClrWdt();
+   	   	Nop();
+   	   	Nop();
+   	   	Nop();
+   	   	Nop();
+   	}
+}
+void UartSendByte(uchar x)     	//uart发送8bit数据，低位在前，高位在后，一位起始位，8位数据，一位奇校验，一位停止位
+{
+       	uchar i=0,Parity=0;
+       	delay_10us(CYC_T);
+       	UartOutPin=1;  	   	   	//初始状态
+       	delay_10us(CYC_T);
+       	UartOutPin=0;  	   	   	//起始位
+       	delay_10us(CYC_T);
+       	for(i=0; i<8; i++) 	   	//发送8bit数据，低位在前，高位在后
+       	{
+       	   	if(x&0x01)
+       	   	{
+       	   	   	UartOutPin=1;
+       	   	   	Parity++;
+       	   	}
+       	   	else UartOutPin=0;
+       	   	x=x>>1;
+       	   	delay_10us(CYC_T);
+       	}
+       	if(Parity&0x01)	UartOutPin=1;  	//奇偶校验位
+       	else UartOutPin=0;
+       	delay_10us(CYC_T);
+       	UartOutPin=1;  	   	   	//停止位
+       	delay_10us(CYC_T);
+}
+
+void adtest(void)
+{
+       	/************************************/
+       	ADCR0=0x15;	   	   	   	   	   	//设置ADC通道AN1,开启ADC
+       	ADCR1=0x82;                     //ADRH保存高4位，ADRL保存低8位
+       	ADEOC=0;   	   	   	   	   	   	//启动模数转换
+       	while(ADEOC==0);   	   	   	   	//等待转化完成
+        delay_10us(1);
+      //  ClrWdt();    	   	   	   	   	//清狗//等待转化完成
+        if(ADEOC!=0)                  //转化完成
+        {
+        UartSendByte(ADRH);    	   	   	//波特率9600，通过P00端口输出
+       	UartSendByte(ADRL);    	   	   	//波特率9600，通过P00端口输出
+        }
+}
+/***********************按键检测函数*****************************/
+void key(void) 	   	   	   	   	   	   	//一个主循环检测一次按键
+{
+   	if(KEY==1)
+   	{
+   	   	keycount++;
+   	   	if(keycount>250) keycount=250; 	//防止溢出
+   	}
+   	else
+   	{
+   	   	if(keycount>20) keyflag=1; 	   	//消抖
+   	   	keycount=0;
+   	}
+}
+/***********************清Ram函数*****************************/
+void ClrRam(void)
+{
+   	__asm
+   	movai       0x7f
+   	movra       FSR0
+   	clrr        INDF0
+   	djzr        FSR0
+   	goto        $-2
+   	clrr        INDF0
+   	__endasm;
+}
+/***********************IO口初始化*****************************/
+void initial_io(void)
+{
+    OSCMR=0x03;   //高频时钟做系统时钟
+   	IOP1=0x00;
+   	OEP1=0xfb; 	 //P12做按键输入，P13做AD测试输出
+   	PUP1=0x00;
+    ADIOS=0x02;   //关闭P15数字IO功能
+    
+}
+void main(void)
+{
+  //   	ClrWdt();  	   	   	   	   	   	//清狗
+   	ClrRam();  	   	   	   	   	   	//清RAM
+   	initial_io();  	   	   	   	   	//端口初始化
+   	keyflag=0;     	   	   	   	   	 //按键标志位
+   	while(1)
+   	{
+           	   	ClrWdt();
+           	   	if(keyflag)
+           	   	{
+           	   	   	keyflag=0;
+           	   	   	adtest();  	//按键一次启动一次ad转换，P05端口为ad口，转换结果从P00口以uart协议发出，波特率9600
+           	   	}
+           	   	else key();
+       	   	delayms(10);
+   	}
+}
+
+/***********************中断子程序*****************************/
+void int_isr(void) __interrupt
+{
+   	__asm  	   	   	   	   	   	   	   	//保存现场数据
+   	movra   _ABuf
+   	swapar  _PFLAG
+   	movra   _StatusBuf
+   	__endasm;
+
+   	//这里写中断子程序
+
+   	__asm  	   	   	   	   	   	   	   	//恢复现场数据
+   	swapar  _StatusBuf
+   	movra   _PFLAG
+   	swapr   _ABuf
+   	swapar  _ABuf
+   	__endasm;
+}
+

@@ -1,0 +1,13 @@
+uint8_t a =10;
+uint8_t b =20;
+
+void swap(uint8_t *p ,uint8_t *q)
+{
+ uint8_t temp;
+ temp = *p;
+ *p = *q;
+ *q = temp; 	
+}
+
+void swap(a ,b);
+
