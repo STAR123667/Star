@@ -1,7 +1,7 @@
 #include "main.h"
 enum keyNum
 {
-     key1,    /*默认为0*/
+         key1,    /*默认为0*/
 	 key2,    /*递增为1*/
 	 key3=4,  /*赋值为4*/
 	 key4,    /*递增为5*/
@@ -9,7 +9,7 @@ enum keyNum
 }Key; 
 // enum keyNum
 // {
-     // key1=0x01,    /*赋值为1*/
+         // key1=0x01,    /*赋值为1*/  
 	 // key2=0x02,    /*赋值为2*/
 	 // key3=0x03,    /*赋值为3*/
 	 // key4=0x04,    /*赋值为4*/
@@ -17,7 +17,7 @@ enum keyNum
 // }Key;    
 struct TestNum
 {
-     int   Num1;
+         int   Num1;
 	 char  Num2;
 	 float Num3; 
 }Key2;
